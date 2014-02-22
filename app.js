@@ -40,6 +40,8 @@ server.listen(app.get('port'), function(){
 
 var ss;
 var sc;
+var backtitle;
+var artwork = true;
 
 //Run and pipe shell script output
 function run_shell(cmd, args, cb, end) {
@@ -174,14 +176,25 @@ io.sockets.on('connection', function (socket) {
 		execute_string = "rhythmbox-client --print-playing-format='%ta;%tt;%td;%te'";
 	
           exec(execute_string, function (error, stdout, stderr){
-		// socket.emit("loading",{output: stdout.toString()});
 		 if (error !== null) {
 			socket.emit("loading", {outpuut: "Error fetching data"});
 		} else {
-		    info = stdout.split(";");
-		    //var Obj = '{"artist":"cuntfoo","title":"foobar"}';
-		    if (info[3] !== undefined) {	
-		    	var Obj = 	'{"artist":"'+escape(info[0])+'","title":"'+escape(info[1])+'","duration":"'+escape(info[2])+'","elapsed":"'+escape(info[3].trim())+'"}';
+		    	info = stdout.split(";");
+			var artwork = "false";
+		      	if (backtitle !== undefined) {	
+				if (escape(info[1]) !== escape(backtitle)) {
+					artwork = "true";				
+					backtitle = info[1];
+				
+				} else {
+				 	backtitle = info[1];
+					artwork = "false";
+				}
+		       } else {
+			 	backtitle = info[1];
+			}
+		    if (info[3] !== undefined) {
+		    	var Obj = 	'{"artist":"'+escape(info[0])+'","title":"'+escape(info[1])+'","duration":"'+escape(info[2])+'","elapsed":"'+escape(info[3].trim())+'","artwork":"'+artwork+'"}';
 		    	socket.emit("loading", {output: Obj});	
 		     } else {
 			  return;
@@ -345,11 +358,26 @@ io.sockets.on('connection', function (socket) {
 			console.log("Error rating "+error);
 			socket.emit("loading", {outpuut: "Error fetching data"});
 		} else {
-			console.log("Rating song with 5");
 			socket.emit("loading", {output: "rate_5"});
 		}
 
 	    });	
+	} else if (data.stream !== null) {
+		var url = data.stream;
+		
+		execute_string = "rhythmbox-client --play-uri="+url;
+		child =  exec(execute_string, function (error, stdout, stderr){
+			if (error !== null) {
+				console.log("Error rating "+error);
+				socket.emit("loading", {outpuut: "Error fetching data"});
+			} else {
+				//console.log("Streaming "+url);
+				socket.emit("loading", {output: "streaming"});
+			}
+
+		    });		
+		
+
 	}
 	  
 	

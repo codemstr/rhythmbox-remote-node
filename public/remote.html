@@ -60,10 +60,11 @@
 				<a id="rate_4" class="btn button btn-primary btn-large btn-block button_id"  data-id="rate_4">4</a>
 				<a id="rate_5" class="btn button btn-primary btn-large btn-block button_id"  data-id="rate_5">5</a>
 			</div>
+		
 		<div class="app-body">
 			
 			<div class=" search">
-			  <input type="text" placeholder="Search Music" class="span3">
+			  <input type="text" placeholder="Stream Uri" class="span3">
 			</div>
 			
 			<div class="tap-space" id="tap"></div>
@@ -75,12 +76,19 @@
 						
             					<div id='title'>Title</div>
             					<div id='artist'>Artist</div>
-						<span id='duration'>Duration</span>
+						<span id='duration'>Duration</span> /
 						<span id='first'>First</span>
+						<span>
+						<div id="albumart-cover"><img id="artwork" src="" /></div>
+						</span>						
 						</div>
+						
 					</ul>
+				
 			</div>
+			
 		</section>
+
 </div>
 	<!-- Les Javascripts -->
 	<script src="/socket.io/socket.io.js"></script>
@@ -121,12 +129,17 @@
 		} else if (button_id === "play-pause") {
 			socket.emit('rhythmbox',{player:"play"});	
 			paused = false;
+			$$('.r-header').style('background-color', 'green');	
+			$("#play").hide();
 			$("#pause").show();
 		} else if (button_id === "pause") {
 			socket.emit('rhythmbox', {player:"pause"});
+			$$('.r-header').style('background-color', 'red');	
 			paused = true;
 			$(".r-header").html("<h2>Paused</h2>");	
 		} else if (button_id === "next") {
+			$("#artwork").hide();
+			$("#play").hide();
 			socket.emit('rhythmbox',{player:"next"});
 			paused = false;
 			$(".r-header").html("<h2>Next track</h2>");
@@ -135,6 +148,8 @@
 			$(".r-header").html("<h2>Seeking...</h2>");
 		}  else if (button_id === "prev") {
 			socket.emit('rhythmbox',{player:"prev"});
+			$("#artwork").hide();
+			$("#play").hide();	
 			paused = false;
 			$(".r-header").html("<h2>Previous track</h2>");
 		} else if (button_id === "nowplaying") {
@@ -209,7 +224,7 @@
 		
 		});
 		$$(".app-body").doubleTap(function() {
-				socket.emit('rhythmbox', {player:"play-pause"});
+			socket.emit('rhythmbox', {player:"play-pause"});
 			$(".r-header").html("<h2>Playing</h2>");	
 		});
 		
@@ -217,7 +232,19 @@
 			//socket.emit('control',{action:"select"});
 			//socket.emit('broadcasting',{action:"select"});
 			socket.emit('rhythmbox', {player:"pause"});
-			$(".r-header").html("<h2>Paused</h2>");		
+			$$('.r-header').style('background-color', 'red');
+			$(".r-header").html("<h2>Paused</h2>");
+			$("#pause").hide();
+			$("#play").show();		
+		 	return;
+		});
+		$$(".r-header").doubleTap(function(){
+			//socket.emit('control',{action:"select"});
+			//socket.emit('broadcasting',{action:"select"});
+			socket.emit('rhythmbox', {player:"play"});
+			$(".r-header").html("<h2>Resuming play..</h2>");
+			$$('.r-header').style('background-color', 'green');
+			$("#play").hide();		
 		 	return;
 		});
 
@@ -238,10 +265,7 @@
                          } 
 		});
 		$$(".search").singleTap(function() {
-			var appdata = $("#videos").html();
-			if (appdata != undefined) {
-	 			$("#videos").html("");
-			}
+			
 		});
 		$$(".tap-space").singleTap(function(){
 			//socket.emit('control',{action:"swipeRight"});
@@ -253,7 +277,9 @@
 		});
 		$(".search input").change(function() {
 			//Youtube.getVideo($(this).val(), socket);
-			//$$('.r-header').style('background-color', 'green');
+			var url = $(this).val();
+			$$('.r-header').style('background-color', 'green');
+			socket.emit('rhythmbox', {stream:url});
 		 });
 		
 	
@@ -311,19 +337,44 @@
 		         if (data.output !== null) {
 				 var t = JSON.parse(data.output);
 				//var Obj = data.output;
+				if (t.artwork === "true") {
+					$("#artwork").show();
+					$("#albumart-cover").html("<span><img id='artwork' src='http://interactiveplaylist.com/ipfal?album="+ t.title +"&artist="+ t.artist +"'></span>");
+					/*if (t.title !== null || t !== null) {	
+					var img = $("#artwork").attr('src', 'http://interactiveplaylist.com/ipfal?album='+ t.title +'&artist='+ t.artist)
+					    .load(function() {
+						 $("#artwork").show();	
+						    $("#artwork").html("<img id='artwork' src='"+ img +"'>").fadeIn('slow');	
+						if (!this.complete || typeof this.naturalWidth == "undefined" || this.naturalWidth == 0) {
+						     $("#albumart-cover").html("<img id='artwork' src='' alt='No image found'>");
+						 
+						} else {
+						    $("#artwork").show();	
+						    $("#artwork").html("<img id='artwork' src='"+ img +"'>").fadeIn('slow');
+						}
+					    });
+					}*/
 				
+					
+				}
+	
 				var artist = unescape(t.artist);
 				var title = unescape(t.title);
     				var duration = unescape(t.duration);
     				var first = unescape(t.elapsed);
 
     			
-				$(".r-header h2").html("Playing: "+ title);
-
-				$("#artist").html("Artist: "+artist);
-				$("#title").html("Title: "+title);
-    				$("#duration").text("Duration: "+duration);
-    				$("#first").text(first);
+				$(".r-header h2").html("<font color='#000'>Playing >></font> "+ title);
+				if (artist === "") {
+					$("#title").html("<font color='purple'>Streaming >></font> "+title);
+					$("#artist").hide();
+				} else {
+					$("#artist").show();
+					$("#artist").html("<font color='yellow'>Artist:</font> "+artist);
+					$("#title").html("<font color='orange'>Title:</font> "+title);
+				}
+    				$("#duration").html("<font color='grey'>Duration:</font> <font color='green'>"+duration+"</font>");
+    				$("#first").html("<font color='lightgreen'>"+first+"</font>");
 				//$("#nowplaying").html(incoming);
 			 } else {
 				return;
