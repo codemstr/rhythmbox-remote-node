@@ -125,7 +125,6 @@ io.sockets.on('connection', function (socket) {
    }
  });
 
-
  socket.on("rhythmbox", function(data){
 	var execute_string = "";
 	var exec = require('child_process').exec;
